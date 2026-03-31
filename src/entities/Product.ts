@@ -13,7 +13,7 @@ export class Product {
   @Column({ nullable: true })
   description: string;
 
-  @Column({ nullable: true })
+  @Column("text", { nullable: true })
   image: string;
 
   @Column("decimal", { precision: 15, scale: 2, default: 0 })
