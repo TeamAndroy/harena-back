@@ -19,7 +19,8 @@ router.get("/", async (req, res) => {
       .createQueryBuilder("p")
       .leftJoinAndSelect("p.lines", "l")
       .leftJoinAndSelect("l.product", "pr")
-      .where("p.entrepriseId = :entrepriseId", { entrepriseId });
+      .where("p.entrepriseId = :entrepriseId", { entrepriseId })
+      .andWhere("p.archived = false");
 
     if (from) qb = qb.andWhere("p.createdAt >= :from", { from });
     if (to) qb = qb.andWhere("p.createdAt <= :to", { to: to + " 23:59:59" });
@@ -42,6 +43,7 @@ router.get("/:id", async (req, res) => {
       .leftJoinAndSelect("l.product", "pr")
       .where("p.id = :id", { id: parseInt(req.params.id) })
       .andWhere("p.entrepriseId = :entrepriseId", { entrepriseId })
+      .andWhere("p.archived = false")
       .getOne();
 
     if (!purchase) return res.status(404).json({ message: "Introuvable" });
@@ -109,40 +111,20 @@ router.post("/", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  const queryRunner = AppDataSource.createQueryRunner();
-  await queryRunner.connect();
-  await queryRunner.startTransaction();
-
   try {
     const entrepriseId = requireEntrepriseId(req);
-    const repo = queryRunner.manager.getRepository(Purchase);
+    const repo = AppDataSource.getRepository(Purchase);
     const purchase = await repo.findOne({
-      where: { id: parseInt(req.params.id), entrepriseId },
-      relations: ["lines", "lines.product"],
+      where: { id: parseInt(req.params.id), entrepriseId, archived: false },
     });
 
     if (!purchase) return res.status(404).json({ message: "Introuvable" });
 
-    for (const line of purchase.lines) {
-      const product = await queryRunner.manager.findOne(Product, {
-        where: { id: line.product.id, entrepriseId },
-      });
-
-      if (product) {
-        product.stock -= line.quantity;
-        if (product.stock < 0) product.stock = 0;
-        await queryRunner.manager.save(product);
-      }
-    }
-
-    await queryRunner.manager.delete(Purchase, { id: purchase.id, entrepriseId });
-    await queryRunner.commitTransaction();
-    res.json({ message: "Supprime" });
+    purchase.archived = true;
+    await repo.save(purchase);
+    res.json({ message: "Archivé" });
   } catch (e) {
-    await queryRunner.rollbackTransaction();
     res.status((e as any).status || 500).json({ message: (e as Error).message || "Erreur" });
-  } finally {
-    await queryRunner.release();
   }
 });
 

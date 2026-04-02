@@ -9,7 +9,7 @@ router.use(authMiddleware);
 router.get("/", async (req, res) => {
   try {
     const repo = AppDataSource.getRepository(Category);
-    const cats = await repo.find({ order: { name: "ASC" } });
+    const cats = await repo.find({ where: { archived: false }, order: { name: "ASC" } });
     res.json(cats);
   } catch (e) {
     res.status(500).json({ message: "Erreur" });
@@ -43,8 +43,9 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const repo = AppDataSource.getRepository(Category);
-    await repo.delete(parseInt(req.params.id));
-    res.json({ message: "Supprimé" });
+    const result = await repo.update({ id: parseInt(req.params.id) }, { archived: true });
+    if (!result.affected) return res.status(404).json({ message: "Introuvable" });
+    res.json({ message: "Archivé" });
   } catch (e) {
     res.status(500).json({ message: "Erreur" });
   }

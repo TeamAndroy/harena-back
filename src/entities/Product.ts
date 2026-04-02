@@ -28,6 +28,9 @@ export class Product {
   @Column({ default: 0 })
   entrepriseId: number;
 
+  @Column({ default: false })
+  archived: boolean;
+
   @ManyToOne(() => Category, { nullable: true, eager: true })
   @JoinColumn()
   category: Category;

@@ -23,7 +23,8 @@ router.get("/", async (req, res) => {
       .leftJoinAndSelect("s.lines", "l")
       .leftJoinAndSelect("l.product", "p")
       .leftJoinAndSelect("s.payments", "pay")
-      .where("s.entrepriseId = :entrepriseId", { entrepriseId });
+      .where("s.entrepriseId = :entrepriseId", { entrepriseId })
+      .andWhere("s.archived = false");
 
     if (from) qb = qb.andWhere("s.createdAt >= :from", { from });
     if (to) qb = qb.andWhere("s.createdAt <= :to", { to: to + " 23:59:59" });
@@ -49,6 +50,7 @@ router.get("/:id", async (req, res) => {
       .leftJoinAndSelect("s.payments", "pay")
       .where("s.id = :id", { id: parseInt(req.params.id) })
       .andWhere("s.entrepriseId = :entrepriseId", { entrepriseId })
+      .andWhere("s.archived = false")
       .getOne();
 
     if (!sale) return res.status(404).json({ message: "Introuvable" });
@@ -163,39 +165,20 @@ router.post("/:id/payment", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  const queryRunner = AppDataSource.createQueryRunner();
-  await queryRunner.connect();
-  await queryRunner.startTransaction();
-
   try {
     const entrepriseId = requireEntrepriseId(req);
-    const saleRepo = queryRunner.manager.getRepository(Sale);
+    const saleRepo = AppDataSource.getRepository(Sale);
     const sale = await saleRepo.findOne({
-      where: { id: parseInt(req.params.id), entrepriseId },
-      relations: ["lines", "lines.product"],
+      where: { id: parseInt(req.params.id), entrepriseId, archived: false },
     });
 
     if (!sale) return res.status(404).json({ message: "Introuvable" });
 
-    for (const line of sale.lines) {
-      const product = await queryRunner.manager.findOne(Product, {
-        where: { id: line.product.id, entrepriseId },
-      });
-
-      if (product) {
-        product.stock += line.quantity;
-        await queryRunner.manager.save(product);
-      }
-    }
-
-    await queryRunner.manager.delete(Sale, { id: sale.id, entrepriseId });
-    await queryRunner.commitTransaction();
-    res.json({ message: "Supprime" });
+    sale.archived = true;
+    await saleRepo.save(sale);
+    res.json({ message: "Archivé" });
   } catch (e) {
-    await queryRunner.rollbackTransaction();
     res.status((e as any).status || 500).json({ message: (e as Error).message || "Erreur" });
-  } finally {
-    await queryRunner.release();
   }
 });
 

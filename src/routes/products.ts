@@ -50,7 +50,8 @@ router.get("/", async (req, res) => {
       .createQueryBuilder("p")
       .leftJoinAndSelect("p.category", "c")
       .leftJoinAndSelect("p.unit", "u")
-      .where("p.entrepriseId = :entrepriseId", { entrepriseId });
+      .where("p.entrepriseId = :entrepriseId", { entrepriseId })
+      .andWhere("p.archived = false");
 
     if (search) qb = qb.andWhere("p.name LIKE :s", { s: `%${search}%` });
     if (category && category !== "all") qb = qb.andWhere("c.id = :cid", { cid: category });
@@ -68,7 +69,7 @@ router.get("/:id", async (req, res) => {
   try {
     const entrepriseId = requireEntrepriseId(req);
     const repo = AppDataSource.getRepository(Product);
-    const p = await repo.findOne({ where: { id: parseInt(req.params.id), entrepriseId } });
+    const p = await repo.findOne({ where: { id: parseInt(req.params.id), entrepriseId, archived: false } });
     if (!p) return res.status(404).json({ message: "Produit introuvable" });
     res.json(p);
   } catch (e) {
@@ -109,9 +110,9 @@ router.delete("/:id", async (req, res) => {
   try {
     const entrepriseId = requireEntrepriseId(req);
     const repo = AppDataSource.getRepository(Product);
-    const result = await repo.delete({ id: parseInt(req.params.id), entrepriseId });
+    const result = await repo.update({ id: parseInt(req.params.id), entrepriseId }, { archived: true });
     if (!result.affected) return res.status(404).json({ message: "Produit introuvable" });
-    res.json({ message: "Supprime" });
+    res.json({ message: "Archivé" });
   } catch (e) {
     res.status((e as any).status || 500).json({ message: (e as Error).message || "Erreur" });
   }

@@ -8,6 +8,9 @@ export class Unit {
   @Column({ default: 0 })
   entrepriseId: number;
 
+  @Column({ default: false })
+  archived: boolean;
+
   @Column()
   name: string;
 

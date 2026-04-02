@@ -7,7 +7,7 @@ export class SaleLine {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Sale, (s) => s.lines)
+  @ManyToOne(() => Sale, (s) => s.lines, { onDelete: "CASCADE" })
   @JoinColumn()
   sale: Sale;
 

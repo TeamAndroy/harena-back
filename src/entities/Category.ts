@@ -9,6 +9,9 @@ export class Category {
   @Column()
   name: string;
 
+  @Column({ default: false })
+  archived: boolean;
+
   @Column({ nullable: true })
   description: string;
 

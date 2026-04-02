@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import express from "express";
 import cors from "cors";
+import swaggerUi from "swagger-ui-express";
 import { AppDataSource } from "./data-source";
 import authRoutes from "./routes/auth";
 import productRoutes from "./routes/products";
@@ -20,17 +21,183 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
-app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/categories", categoryRoutes);
-app.use("/api/units", unitRoutes);
-app.use("/api/clients", clientRoutes);
-app.use("/api/sales", saleRoutes);
-app.use("/api/purchases", purchaseRoutes);
-app.use("/api/expenses", expenseRoutes);
-app.use("/api/stats", statsRoutes);
-
+const API_PREFIX = "/api/v1";
 const PORT = process.env.PORT || 3001;
+
+const swaggerDocument = {
+  openapi: "3.0.0",
+  info: {
+    title: "Harena API",
+    version: "1.0.0",
+    description: "Documentation Swagger de l'API Harena version 1",
+  },
+  servers: [
+    {
+      url: `http://localhost:${PORT}${API_PREFIX}`,
+      description: "Serveur local",
+    },
+  ],
+  components: {
+    securitySchemes: {
+      BearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+      },
+    },
+  },
+  security: [{ BearerAuth: [] }],
+  paths: {
+    "/auth/login": {
+      post: {
+        tags: ["Auth"],
+        summary: "Connexion utilisateur",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  username: { type: "string" },
+                  password: { type: "string" },
+                },
+                required: ["username", "password"],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Connecté avec succès" },
+          "401": { description: "Identifiants invalides" },
+        },
+      },
+    },
+    "/auth/register": {
+      post: {
+        tags: ["Auth"],
+        summary: "Créer un nouvel utilisateur et entreprise",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  companyName: { type: "string" },
+                  managerName: { type: "string" },
+                  email: { type: "string" },
+                  phone: { type: "string" },
+                  activity: { type: "string" },
+                  teamSize: { type: "string" },
+                  password: { type: "string" },
+                },
+                required: ["companyName", "managerName", "email", "phone", "activity", "teamSize", "password"],
+              },
+            },
+          },
+        },
+        responses: {
+          "201": { description: "Inscription réussie" },
+          "400": { description: "Données invalides" },
+        },
+      },
+    },
+    "/categories": {
+      get: {
+        tags: ["Categories"],
+        summary: "Liste des catégories",
+        responses: { "200": { description: "Liste récupérée" } },
+      },
+      post: {
+        tags: ["Categories"],
+        summary: "Créer une catégorie",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  description: { type: "string" },
+                },
+                required: ["name"],
+              },
+            },
+          },
+        },
+        responses: { "201": { description: "Catégorie créée" } },
+      },
+    },
+    "/products": {
+      get: {
+        tags: ["Products"],
+        summary: "Liste des produits",
+        responses: { "200": { description: "Liste récupérée" } },
+      },
+    },
+    "/sales": {
+      get: {
+        tags: ["Sales"],
+        summary: "Liste des ventes",
+        responses: { "200": { description: "Liste récupérée" } },
+      },
+      post: {
+        tags: ["Sales"],
+        summary: "Créer une vente",
+        responses: { "201": { description: "Vente créée" } },
+      },
+    },
+    "/purchases": {
+      get: {
+        tags: ["Purchases"],
+        summary: "Liste des achats",
+        responses: { "200": { description: "Liste récupérée" } },
+      },
+    },
+    "/expenses": {
+      get: {
+        tags: ["Expenses"],
+        summary: "Liste des dépenses",
+        responses: { "200": { description: "Liste récupérée" } },
+      },
+    },
+    "/units": {
+      get: {
+        tags: ["Units"],
+        summary: "Liste des unités",
+        responses: { "200": { description: "Liste récupérée" } },
+      },
+    },
+    "/clients": {
+      get: {
+        tags: ["Clients"],
+        summary: "Liste des clients",
+        responses: { "200": { description: "Liste récupérée" } },
+      },
+    },
+    "/stats": {
+      get: {
+        tags: ["Stats"],
+        summary: "Statistiques de l'application",
+        responses: { "200": { description: "Statistiques récupérées" } },
+      },
+    },
+  },
+};
+
+app.use(`${API_PREFIX}/auth`, authRoutes);
+app.use(`${API_PREFIX}/products`, productRoutes);
+app.use(`${API_PREFIX}/categories`, categoryRoutes);
+app.use(`${API_PREFIX}/units`, unitRoutes);
+app.use(`${API_PREFIX}/clients`, clientRoutes);
+app.use(`${API_PREFIX}/sales`, saleRoutes);
+app.use(`${API_PREFIX}/purchases`, purchaseRoutes);
+app.use(`${API_PREFIX}/expenses`, expenseRoutes);
+app.use(`${API_PREFIX}/stats`, statsRoutes);
+app.use(`${API_PREFIX}/docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.get(`${API_PREFIX}/docs.json`, (_, res) => res.json(swaggerDocument));
 
 AppDataSource.initialize().then(async () => {
   console.log("✅ Database connected");

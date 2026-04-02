@@ -13,7 +13,11 @@ router.get("/", async (req, res) => {
     const repo = AppDataSource.getRepository(Client);
     const { search } = req.query;
 
-    let qb = repo.createQueryBuilder("c").where("c.entrepriseId = :entrepriseId", { entrepriseId });
+    let qb = repo
+      .createQueryBuilder("c")
+      .where("c.entrepriseId = :entrepriseId", { entrepriseId })
+      .andWhere("c.archived = false");
+
     if (search) qb = qb.andWhere("(c.name LIKE :s OR c.phone LIKE :s)", { s: `%${search}%` });
 
     const clients = await qb.orderBy("c.name", "ASC").getMany();
@@ -53,9 +57,9 @@ router.delete("/:id", async (req, res) => {
   try {
     const entrepriseId = requireEntrepriseId(req);
     const repo = AppDataSource.getRepository(Client);
-    const result = await repo.delete({ id: parseInt(req.params.id), entrepriseId });
+    const result = await repo.update({ id: parseInt(req.params.id), entrepriseId }, { archived: true });
     if (!result.affected) return res.status(404).json({ message: "Introuvable" });
-    res.json({ message: "Supprime" });
+    res.json({ message: "Archivé" });
   } catch (e) {
     res.status((e as any).status || 500).json({ message: (e as Error).message || "Erreur" });
   }

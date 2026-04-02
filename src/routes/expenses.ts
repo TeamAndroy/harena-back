@@ -13,7 +13,10 @@ router.get("/", async (req, res) => {
     const repo = AppDataSource.getRepository(Expense);
     const { from, to } = req.query;
 
-    let qb = repo.createQueryBuilder("e").where("e.entrepriseId = :entrepriseId", { entrepriseId });
+    let qb = repo
+      .createQueryBuilder("e")
+      .where("e.entrepriseId = :entrepriseId", { entrepriseId })
+      .andWhere("e.archived = false");
     if (from) qb = qb.andWhere("e.createdAt >= :from", { from });
     if (to) qb = qb.andWhere("e.createdAt <= :to", { to: to + " 23:59:59" });
 
@@ -54,9 +57,9 @@ router.delete("/:id", async (req, res) => {
   try {
     const entrepriseId = requireEntrepriseId(req);
     const repo = AppDataSource.getRepository(Expense);
-    const result = await repo.delete({ id: parseInt(req.params.id), entrepriseId });
+    const result = await repo.update({ id: parseInt(req.params.id), entrepriseId }, { archived: true });
     if (!result.affected) return res.status(404).json({ message: "Introuvable" });
-    res.json({ message: "Supprime" });
+    res.json({ message: "Archivé" });
   } catch (e) {
     res.status((e as any).status || 500).json({ message: (e as Error).message || "Erreur" });
   }

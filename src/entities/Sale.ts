@@ -11,6 +11,9 @@ export class Sale {
   @Column({ default: 0 })
   entrepriseId: number;
 
+  @Column({ default: false })
+  archived: boolean;
+
   @Column()
   reference: string;
 

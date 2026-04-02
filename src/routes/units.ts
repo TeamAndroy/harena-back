@@ -25,7 +25,7 @@ router.get("/", async (req, res) => {
     const entrepriseId = requireEntrepriseId(req);
     const repo = AppDataSource.getRepository(Unit);
     await ensureDefaultUnits(entrepriseId);
-    const units = await repo.find({ where: { entrepriseId }, order: { name: "ASC" } });
+    const units = await repo.find({ where: { entrepriseId, archived: false }, order: { name: "ASC" } });
     res.json(units);
   } catch (e) {
     res.status((e as any).status || 500).json({ message: (e as Error).message || "Erreur" });
@@ -62,9 +62,9 @@ router.delete("/:id", async (req, res) => {
   try {
     const entrepriseId = requireEntrepriseId(req);
     const repo = AppDataSource.getRepository(Unit);
-    const result = await repo.delete({ id: parseInt(req.params.id), entrepriseId });
+    const result = await repo.update({ id: parseInt(req.params.id), entrepriseId }, { archived: true });
     if (!result.affected) return res.status(404).json({ message: "Introuvable" });
-    res.json({ message: "Supprime" });
+    res.json({ message: "Archivé" });
   } catch (e) {
     res.status((e as any).status || 500).json({ message: (e as Error).message || "Erreur" });
   }
